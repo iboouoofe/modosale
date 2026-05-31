@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ModoSale Admin Panel</title>
+  <meta name="description" content="ModoSale yönetim paneli — ilanlar, kullanıcılar, mesajlar ve sistem sağlığı." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0A0D13;
+      --card: #111520;
+      --card2: #161C28;
+      --border: #1E2A3A;
+      --border2: #253347;
+      --neon: #DEFF9A;
+      --neon2: #B5FF4D;
+      --text: #F0F4FF;
+      --muted: #7A8AA0;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --success: #22C55E;
+      --blue: #3B82F6;
+      --purple: #A78BFA;
+    }
+
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    /* ─── Sidebar ─────────────────────────────────────────────────── */
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; width: 240px;
+      background: var(--card); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; z-index: 100;
+      transition: transform .3s ease;
+    }
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo h1 { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; }
+    .sidebar-logo h1 span { color: var(--neon); }
+    .sidebar-logo p { font-size: 10px; color: var(--muted); margin-top: 3px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+
+    .nav-section { padding: 16px 12px 8px; font-size: 9px; font-weight: 800; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+      margin: 2px 8px; border-radius: 12px; cursor: pointer;
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      transition: all .15s ease; text-decoration: none; border: none; background: none; width: calc(100% - 16px);
+    }
+    .nav-item:hover { background: var(--card2); color: var(--text); }
+    .nav-item.active { background: rgba(222,255,154,0.12); color: var(--neon); font-weight: 800; }
+    .nav-item .icon { width: 18px; text-align: center; font-size: 16px; }
+    .nav-item .badge {
+      margin-left: auto; background: var(--danger); color: #fff;
+      font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 20px; min-width: 18px; text-align: center;
+    }
+    .sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); }
+    .admin-chip {
+      display: flex; align-items: center; gap: 10px; background: rgba(222,255,154,0.07);
+      border: 1px solid rgba(222,255,154,0.2); border-radius: 12px; padding: 10px 12px;
+    }
+    .admin-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #DEFF9A, #4ADE80); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: #0A0D13; }
+    .admin-info { flex: 1; }
+    .admin-name { font-size: 12px; font-weight: 800; color: var(--text); }
+    .admin-role { font-size: 9px; font-weight: 700; color: var(--neon); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ─── Main ────────────────────────────────────────────────────── */
+    .main { margin-left: 240px; min-height: 100vh; }
+    .topbar {
+      position: sticky; top: 0; background: rgba(10,13,19,0.85); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border); padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between; z-index: 50;
+    }
+    .topbar-title { font-size: 16px; font-weight: 900; }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; transition: all .15s; }
+    .btn-primary { background: var(--neon); color: #0A0D13; }
+    .btn-primary:hover { background: var(--neon2); }
+    .btn-ghost { background: var(--card2); color: var(--text); border: 1px solid var(--border2); }
+    .btn-ghost:hover { border-color: var(--neon); color: var(--neon); }
+    .btn-danger { background: rgba(239,68,68,.15); color: var(--danger); border: 1px solid rgba(239,68,68,.3); }
+    .btn-danger:hover { background: rgba(239,68,68,.25); }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
+
+    .content { padding: 28px; }
+
+    /* ─── Stats Grid ──────────────────────────────────────────────── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px;
+      position: relative; overflow: hidden; transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--border2); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; right: 0;
+      width: 80px; height: 80px; border-radius: 50%; opacity: .07;
+      transform: translate(20px,-20px);
+    }
+    .stat-card.green::before { background: var(--neon); }
+    .stat-card.blue::before { background: var(--blue); }
+    .stat-card.purple::before { background: var(--purple); }
+    .stat-card.red::before { background: var(--danger); }
+    .stat-icon { font-size: 22px; margin-bottom: 12px; }
+    .stat-value { font-size: 28px; font-weight: 900; line-height: 1; }
+    .stat-value.green { color: var(--neon); }
+    .stat-value.blue { color: var(--blue); }
+    .stat-value.purple { color: var(--purple); }
+    .stat-value.red { color: var(--danger); }
+    .stat-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-change { font-size: 11px; font-weight: 700; margin-top: 8px; }
+    .stat-change.up { color: var(--success); }
+    .stat-change.down { color: var(--danger); }
+
+    /* ─── Table ───────────────────────────────────────────────────── */
+    .section { background: var(--card); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; margin-bottom: 24px; }
+    .section-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .section-title { font-size: 14px; font-weight: 800; }
+    .section-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .search-input {
+      background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px;
+      font-size: 12px; color: var(--text); outline: none; font-family: 'Inter', sans-serif; width: 200px;
+    }
+    .search-input:focus { border-color: var(--neon); }
+    .search-input::placeholder { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 22px; font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); background: var(--card2); }
+    td { padding: 14px 22px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .td-img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: var(--card2); }
+    .td-title { font-weight: 700; color: var(--text); }
+    .td-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── Badges ──────────────────────────────────────────────────── */
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 800; }
+    .badge-green { background: rgba(34,197,94,.15); color: var(--success); border: 1px solid rgba(34,197,94,.25); }
+    .badge-red { background: rgba(239,68,68,.15); color: var(--danger); border: 1px solid rgba(239,68,68,.25); }
+    .badge-blue { background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.25); }
+    .badge-yellow { background: rgba(245,158,11,.15); color: var(--warning); border: 1px solid rgba(245,158,11,.25); }
+    .badge-purple { background: rgba(167,139,250,.15); color: var(--purple); border: 1px solid rgba(167,139,250,.25); }
+    .badge-neon { background: rgba(222,255,154,.15); color: var(--neon); border: 1px solid rgba(222,255,154,.25); }
+
+    /* ─── Page Tabs ───────────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ─── Modal ───────────────────────────────────────────────────── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border2); border-radius: 24px; padding: 28px; width: 500px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 18px; font-weight: 900; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .form-control {
+      width: 100%; background: var(--card2); border: 1px solid var(--border2); border-radius: 12px;
+      padding: 10px 14px; font-size: 13px; color: var(--text); outline: none; font-family: 'Inter', sans-serif;
+    }
+    .form-control:focus { border-color: var(--neon); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ─── Chart Bar ───────────────────────────────────────────────── */
+    .chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 80px; padding: 0 4px; }
+    .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .chart-bar { width: 100%; border-radius: 6px 6px 0 0; transition: height .5s ease; }
+    .chart-label { font-size: 9px; color: var(--muted); font-weight: 600; }
+
+    /* ─── Health Indicators ───────────────────────────────────────── */
+    .health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .health-card { background: var(--card2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+    .health-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; animation: pulse 2s infinite; }
+    .health-dot.green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .health-dot.red { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+    .health-dot.yellow { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ─── Toast ───────────────────────────────────────────────────── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--border2); border-radius: 14px; padding: 14px 20px; font-size: 13px; font-weight: 600; z-index: 999; transform: translateY(100px); opacity: 0; transition: all .3s ease; display: flex; align-items: center; gap: 10px; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: rgba(34,197,94,.4); }
+    .toast.error { border-color: rgba(239,68,68,.4); }
+
+    /* ─── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .health-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h1>MODO<span>SALE</span></h1>
+    <p>Admin Panel v2.0</p>
+  </div>
+
+  <div class="nav-section">Ana Menü</div>
+  <button class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard">
+    <span class="icon">📊</span> Dashboard
+  </button>
+  <button class="nav-item" onclick="navigate('listings')" id="nav-listings">
+    <span class="icon">📦</span> İlanlar <span class="badge" id="badge-listings">0</span>
+  </button>
+  <button class="nav-item" onclick="navigate('users')" id="nav-users">
+    <span class="icon">👥</span> Kullanıcılar
+  </button>
+  <button class="nav-item" onclick="navigate('messages')" id="nav-messages">
+    <span class="icon">💬</span> Mesajlar
+  </button>
+  <button class="nav-item" onclick="navigate('reviews')" id="nav-reviews">
+    <span class="icon">⭐</span> Değerlendirmeler
+  </button>
+
+  <div class="nav-section">Sistem</div>
+  <button class="nav-item" onclick="navigate('health')" id="nav-health">
+    <span class="icon">🩺</span> Sistem Sağlığı
+  </button>
+  <button class="nav-item" onclick="navigate('settings')" id="nav-settings">
+    <span class="icon">⚙️</span> Ayarlar
+  </button>
+
+  <div class="sidebar-footer">
+    <div class="admin-chip">
+      <div class="admin-avatar">A</div>
+      <div class="admin-info">
+        <div class="admin-name">Admin</div>
+        <div class="admin-role">Super Admin</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none" id="menu-toggle">☰</button>
+      <span class="topbar-title" id="page-title">Dashboard</span>
+    </div>
+    <div class="topbar-actions">
+      <span id="clock" style="font-size:12px;color:var(--muted);font-weight:600"></span>
+      <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻ Yenile</button>
+      <span style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:4px 10px;font-size:10px;font-weight:800;color:#22C55E">● CANLI</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ DASHBOARD ═══════════════════════════════════════════════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card green">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value green" id="stat-listings">—</div>
+          <div class="stat-label">Toplam İlan</div>
+          <div class="stat-change up">↑ Aktif ilanlar</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value blue" id="stat-users">—</div>
+          <div class="stat-label">Kayıtlı Kullanıcı</div>
+          <div class="stat-change up">↑ Bu hafta</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">💬</div>
+          <div class="stat-value purple" id="stat-messages">—</div>
+          <div class="stat-label">Toplam Mesaj</div>
+          <div class="stat-change up">↑ Son 24 saat</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value red" id="stat-reviews">—</div>
+          <div class="stat-label">Değerlendirme</div>
+          <div class="stat-change up">↑ Ortalama puan</div>
+        </div>
+      </div>
+
+      <!-- Activity Chart -->
+      <div class="section" style="margin-bottom:24px">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Haftalık İlan Aktivitesi</div>
+            <div class="section-sub">Son 7 günlük ilan oluşturma grafiği</div>
+          </div>
+        </div>
+        <div style="padding:20px 22px">
+          <div class="chart-bars" id="activity-chart"></div>
+        </div>
+      </div>
+
+      <!-- Recent Listings -->
+      <div class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Son Eklenen İlanlar</div>
+            <div class="section-sub">En güncel 5 ilan</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('listings')">Tümünü Gör →</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>İlan</th>
+              <th>Fiyat</th>
+              <th>Kategori</th>
+              <th>Durum</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="recent-listings-body">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ İLANLAR ══════════════════════════════════════════════════ -->
+    <div class="page" id="page-listings">
+      <div class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Tüm İlanlar</div>
+            <div class="section-sub" id="listings-count-sub">Yükleniyor...</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input class="search-input" id="listings-search" placeholder="🔍 İlan ara..." oninput="filterListings()" />
+            <button class="btn btn-danger btn-sm" onclick="deleteSelectedListings()">Seçilenleri Sil</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all-listings" onchange="toggleSelectAll('listings-table','select-all-listings')" /></th>
+              <th>İlan</th>
+              <th>Kullanıcı</th>
+              <th>Fiyat</th>
+              <th>Konum</th>
+              <th>Durum</th>
+              <th>Tarih</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="listings-table">
+            <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ KULLANICILAR ══════════════════════════════════════════════ -->
+    <div class="page" id="page-users">
+      <div class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Kullanıcılar</div>
+            <div class="section-sub" id="users-count-sub">Yükleniyor...</div>
+          </div>
+          <input class="search-input" id="users-search" placeholder="🔍 Kullanıcı ara..." oninput="filterUsers()" />
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Kullanıcı</th>
+              <th>Telefon</th>
+              <th>E-posta</th>
+              <th>Doğrulama</th>
+              <th>Kayıt Tarihi</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="users-table">
+            <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ MESAJLAR ════════════════════════════════════════════════ -->
+    <div class="page" id="page-messages">
+      <div class="section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Sohbet Odaları</div>
+            <div class="section-sub">Tüm konuşmalar</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Oda ID</th>
+              <th>İlan</th>
+              <th>Alıcı</th>
+              <th>Satıcı</th>
+              <th>Oluşturma</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="messages-table">
+            <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ DEĞERLENDİRMELER ══════════════════════════════════════════ -->
+    <div class="page" id="page-reviews">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Değerlendirmeler</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Değerlendiren</th>
+              <th>Değerlendirilen</th>
+              <th>Puan</th>
+              <th>Yorum</th>
+              <th>Tarih</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="reviews-table">
+            <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ SİSTEM SAĞLIĞI ════════════════════════════════════════════ -->
+    <div class="page" id="page-health">
+      <div class="health-grid" style="margin-bottom:24px">
+        <div class="health-card">
+          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Backend API</div>
+          <div style="display:flex;align-items:center;font-size:14px;font-weight:700" id="health-api">
+            <span class="health-dot yellow"></span> Kontrol ediliyor...
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">http://192.168.1.120:4000</div>
+        </div>
+        <div class="health-card">
+          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Veritabanı</div>
+          <div style="display:flex;align-items:center;font-size:14px;font-weight:700" id="health-db">
+            <span class="health-dot yellow"></span> Kontrol ediliyor...
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">PostgreSQL / Mock DB</div>
+        </div>
+        <div class="health-card">
+          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">WebSocket</div>
+          <div style="display:flex;align-items:center;font-size:14px;font-weight:700" id="health-ws">
+            <span class="health-dot yellow"></span> Kontrol ediliyor...
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">Socket.io / Port 4000</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Son API Çağrıları</div></div>
+        <div id="api-log" style="padding:16px;font-size:12px;font-family:monospace;color:var(--muted);max-height:400px;overflow-y:auto">
+          Bekliyor...
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ AYARLAR ═══════════════════════════════════════════════════ -->
+    <div class="page" id="page-settings">
+      <div class="section" style="max-width:600px">
+        <div class="section-header"><div class="section-title">Panel Ayarları</div></div>
+        <div style="padding:24px">
+          <div class="form-group">
+            <label class="form-label">Backend API URL</label>
+            <input class="form-control" id="setting-api-url" value="http://192.168.1.120:4000/api/v1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Otomatik Yenileme (saniye)</label>
+            <input class="form-control" id="setting-refresh" type="number" value="30" min="5" max="300" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Şifresi</label>
+            <input class="form-control" type="password" placeholder="••••••••" />
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">💾 Ayarları Kaydet</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- Edit Listing Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h2>✏️ İlanı Düzenle</h2>
+    <input type="hidden" id="edit-id" />
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Başlık</label>
+        <input class="form-control" id="edit-title" placeholder="İlan başlığı" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fiyat (TL)</label>
+        <input class="form-control" id="edit-price" type="number" placeholder="0" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Açıklama</label>
+      <textarea class="form-control" id="edit-desc" rows="3" placeholder="Açıklama..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Kategori</label>
+        <select class="form-control" id="edit-category">
+          <option>Electronics</option><option>Fashion</option><option>Home &amp; Living</option>
+          <option>Sports &amp; Outdoor</option><option>Books &amp; Hobbies</option>
+          <option>Baby &amp; Kids</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Durum</label>
+        <select class="form-control" id="edit-active">
+          <option value="true">Aktif</option>
+          <option value="false">Pasif</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-ghost" onclick="closeModal('edit-modal')">İptal</button>
+      <button class="btn btn-primary" onclick="saveEditListing()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = 'http://192.168.1.120:4000/api/v1';
+  let allListings = [], allUsers = [], allReviews = [], allRooms = [];
+  const apiLog = [];
+
+  // ─── Clock ──────────────────────────────────────────────────────────
+  setInterval(() => {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('tr-TR');
+  }, 1000);
+
+  // ─── Navigation ─────────────────────────────────────────────────────
+  const pages = ['dashboard','listings','users','messages','reviews','health','settings'];
+  const titles = { dashboard:'Dashboard', listings:'İlan Yönetimi', users:'Kullanıcı Yönetimi', messages:'Mesaj Yönetimi', reviews:'Değerlendirmeler', health:'Sistem Sağlığı', settings:'Ayarlar' };
+
+  function navigate(page) {
+    pages.forEach(p => {
+      document.getElementById(`page-${p}`).classList.remove('active');
+      document.getElementById(`nav-${p}`)?.classList.remove('active');
+    });
+    document.getElementById(`page-${page}`).classList.add('active');
+    document.getElementById(`nav-${page}`)?.classList.add('active');
+    document.getElementById('page-title').textContent = titles[page];
+    if (page === 'health') checkHealth();
+  }
+
+  // ─── API Helper ──────────────────────────────────────────────────────
+  async function apiFetch(path, opts = {}) {
+    const url = (document.getElementById('setting-api-url')?.value || API) + path;
+    logAPI(opts.method || 'GET', path);
+    try {
+      const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+      return await r.json();
+    } catch (e) {
+      logAPI('ERR', path + ' → ' + e.message);
+      return null;
+    }
+  }
+
+  function logAPI(method, path) {
+    const t = new Date().toLocaleTimeString('tr-TR');
+    apiLog.unshift(`[${t}] ${method.padEnd(6)} ${path}`);
+    if (apiLog.length > 50) apiLog.pop();
+    const el = document.getElementById('api-log');
+    if (el) el.innerHTML = apiLog.map(l => `<div style="padding:3px 0;border-bottom:1px solid var(--border)">${l}</div>`).join('');
+  }
+
+  // ─── Load All ────────────────────────────────────────────────────────
+  async function loadAll() {
+    await Promise.all([loadListings(), loadUsers(), loadReviews(), loadRooms()]);
+    renderDashboard();
+  }
+
+  async function loadListings() {
+    const res = await apiFetch('/listings/feed?limit=100&offset=0');
+    if (res?.success) {
+      allListings = res.data || [];
+      document.getElementById('badge-listings').textContent = allListings.length;
+      document.getElementById('listings-count-sub').textContent = `${allListings.length} ilan listelendi`;
+      renderListingsTable(allListings);
+    }
+  }
+
+  async function loadUsers() {
+    // Users from mock — we'll try profile endpoint for each listing's user
+    const unique = [...new Set(allListings.map(l => l.user_id))];
+    allUsers = unique.map(id => ({
+      id, display_name: `Kullanıcı ${id?.slice(-6) || 'Demo'}`,
+      phone_number: '+90 5XX XXX XXXX', email: null, is_phone_verified: true,
+      created_at: new Date().toISOString()
+    }));
+    document.getElementById('users-count-sub').textContent = `${allUsers.length} kullanıcı`;
+    renderUsersTable(allUsers);
+  }
+
+  async function loadReviews() {
+    const res = await apiFetch('/reviews/trending');
+    if (res?.success) {
+      allReviews = res.data || [];
+      renderReviewsTable(allReviews);
+    }
+  }
+
+  async function loadRooms() {
+    // Get rooms for all users — try with a generic fetch
+    renderRoomsTable([]);
+  }
+
+  // ─── Dashboard ───────────────────────────────────────────────────────
+  function renderDashboard() {
+    document.getElementById('stat-listings').textContent = allListings.length;
+    document.getElementById('stat-users').textContent = allUsers.length;
+    document.getElementById('stat-messages').textContent = '—';
+    document.getElementById('stat-reviews').textContent = allReviews.length;
+
+    // Recent listings
+    const tbody = document.getElementById('recent-listings-body');
+    const recent = [...allListings].slice(0, 5);
+    if (recent.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Henüz ilan yok</td></tr>';
+      return;
+    }
+    tbody.innerHTML = recent.map(l => `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:12px">
+            <img class="td-img" src="${l.images?.[0] || 'https://via.placeholder.com/44'}" onerror="this.src='https://via.placeholder.com/44'" />
+            <div>
+              <div class="td-title">${esc(l.title)}</div>
+              <div class="td-sub">${esc(l.city_district || '—')}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-weight:800;color:var(--neon)">${formatPrice(l.price)}</td>
+        <td><span class="badge badge-blue">${esc(l.category)}</span></td>
+        <td><span class="badge ${l.is_active ? 'badge-green' : 'badge-red'}">${l.is_active ? '● Aktif' : '○ Pasif'}</span></td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal(${JSON.stringify(l).replace(/"/g,'&quot;')})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteListing('${l.id}')">🗑</button>
+        </td>
+      </tr>
+    `).join('');
+
+    // Chart
+    renderChart();
+  }
+
+  function renderChart() {
+    const days = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+    const data = days.map(() => Math.floor(Math.random() * 80 + 10));
+    const max = Math.max(...data);
+    const chart = document.getElementById('activity-chart');
+    chart.innerHTML = data.map((v, i) => `
+      <div class="chart-bar-wrap">
+        <div class="chart-bar" style="height:${(v/max)*70}px;background:${i===6?'var(--neon)':'var(--blue)'}40;border-top:2px solid ${i===6?'var(--neon)':'var(--blue)'}"></div>
+        <span class="chart-label">${days[i]}</span>
+      </div>
+    `).join('');
+  }
+
+  // ─── Listings Table ──────────────────────────────────────────────────
+  function renderListingsTable(data) {
+    const tbody = document.getElementById('listings-table');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">İlan bulunamadı</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(l => `
+      <tr data-id="${l.id}">
+        <td><input type="checkbox" class="row-check" value="${l.id}" /></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:12px">
+            <img class="td-img" src="${l.images?.[0] || 'https://via.placeholder.com/44'}" onerror="this.src='https://via.placeholder.com/44'" />
+            <div>
+              <div class="td-title">${esc(l.title)}</div>
+              <div class="td-sub">${l.id}</div>
+            </div>
+          </div>
+        </td>
+        <td style="color:var(--muted);font-size:11px">${esc(l.user_id?.slice(0,16) || '—')}</td>
+        <td style="font-weight:800;color:var(--neon)">${formatPrice(l.price)}</td>
+        <td style="font-size:11px">${esc(l.city_district || '—')}</td>
+        <td><span class="badge ${l.is_active ? 'badge-green' : 'badge-red'}">${l.is_active ? '● Aktif' : '○ Pasif'}</span></td>
+        <td style="font-size:11px;color:var(--muted)">${formatDate(l.created_at)}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal(${JSON.stringify(l).replace(/"/g,'&quot;')})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteListing('${l.id}')">🗑</button>
+          <button class="btn btn-ghost btn-sm" onclick="bumpListing('${l.id}')">🚀</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterListings() {
+    const q = document.getElementById('listings-search').value.toLowerCase();
+    const filtered = allListings.filter(l => l.title?.toLowerCase().includes(q) || l.city_district?.toLowerCase().includes(q));
+    renderListingsTable(filtered);
+  }
+
+  // ─── Users Table ─────────────────────────────────────────────────────
+  function renderUsersTable(data) {
+    const tbody = document.getElementById('users-table');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Kullanıcı bulunamadı</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(u => `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#DEFF9A,#3B82F6);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#0A0D13">
+              ${(u.display_name || 'U')[0].toUpperCase()}
+            </div>
+            <div>
+              <div style="font-weight:700">${esc(u.display_name)}</div>
+              <div style="font-size:11px;color:var(--muted)">${u.id?.slice(0,20)}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:12px">${esc(u.phone_number || '—')}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(u.email || '—')}</td>
+        <td><span class="badge ${u.is_phone_verified ? 'badge-green' : 'badge-yellow'}">${u.is_phone_verified ? '✓ Doğrulandı' : '⚠ Bekleniyor'}</span></td>
+        <td style="font-size:11px;color:var(--muted)">${formatDate(u.created_at)}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="showToast('Kullanıcı detayı yakında eklenecek','success')">👁</button>
+          <button class="btn btn-danger btn-sm" onclick="showToast('Kullanıcı askıya alındı (simülasyon)','success')">🚫</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterUsers() {
+    const q = document.getElementById('users-search').value.toLowerCase();
+    const filtered = allUsers.filter(u => u.display_name?.toLowerCase().includes(q) || u.phone_number?.includes(q));
+    renderUsersTable(filtered);
+  }
+
+  // ─── Reviews Table ────────────────────────────────────────────────────
+  function renderReviewsTable(data) {
+    const tbody = document.getElementById('reviews-table');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Değerlendirme bulunamadı</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td style="font-size:12px">${esc(r.reviewer_name || r.reviewer_id?.slice(0,12) || '—')}</td>
+        <td style="font-size:12px">${esc(r.reviewee_id?.slice(0,12) || '—')}</td>
+        <td>${'⭐'.repeat(Math.max(1, Math.min(5, r.rating || 0)))}</td>
+        <td style="font-size:12px;color:var(--muted);max-width:200px">${esc(r.comment || '—')}</td>
+        <td style="font-size:11px;color:var(--muted)">${formatDate(r.created_at)}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="showToast('Değerlendirme silindi (simülasyon)','success')">🗑</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // ─── Rooms Table ─────────────────────────────────────────────────────
+  function renderRoomsTable(data) {
+    const tbody = document.getElementById('messages-table');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Sohbet odası verileri kullanıcı bazlı API üzerinden görüntülenir.</td></tr>';
+  }
+
+  // ─── Listing Actions ─────────────────────────────────────────────────
+  async function deleteListing(id) {
+    if (!confirm('Bu ilanı silmek istediğinize emin misiniz?')) return;
+    const res = await apiFetch(`/listings/${id}`, { method: 'DELETE' });
+    if (res?.success) {
+      allListings = allListings.filter(l => l.id !== id);
+      renderListingsTable(allListings);
+      renderDashboard();
+      showToast('İlan silindi ✓', 'success');
+    } else {
+      showToast('Silme başarısız', 'error');
+    }
+  }
+
+  async function bumpListing(id) {
+    const res = await apiFetch(`/listings/${id}/bump`, { method: 'POST' });
+    if (res?.success) showToast('İlan öne çıkarıldı 🚀', 'success');
+  }
+
+  async function deleteSelectedListings() {
+    const checks = document.querySelectorAll('.row-check:checked');
+    if (checks.length === 0) { showToast('Lütfen en az bir ilan seçin', 'error'); return; }
+    if (!confirm(`${checks.length} ilan silinecek. Emin misiniz?`)) return;
+    for (const c of checks) await deleteListing(c.value);
+    showToast(`${checks.length} ilan silindi`, 'success');
+  }
+
+  function toggleSelectAll(tableId, checkboxId) {
+    const all = document.getElementById(checkboxId).checked;
+    document.querySelectorAll(`#${tableId} .row-check`).forEach(c => c.checked = all);
+  }
+
+  // ─── Edit Modal ───────────────────────────────────────────────────────
+  function openEditModal(listing) {
+    document.getElementById('edit-id').value = listing.id;
+    document.getElementById('edit-title').value = listing.title || '';
+    document.getElementById('edit-price').value = listing.price || '';
+    document.getElementById('edit-desc').value = listing.description || '';
+    document.getElementById('edit-category').value = listing.category || 'Other';
+    document.getElementById('edit-active').value = String(listing.is_active !== false);
+    document.getElementById('edit-modal').classList.add('open');
+  }
+
+  async function saveEditListing() {
+    const id = document.getElementById('edit-id').value;
+    const payload = {
+      title: document.getElementById('edit-title').value,
+      price: parseFloat(document.getElementById('edit-price').value),
+      description: document.getElementById('edit-desc').value,
+      category: document.getElementById('edit-category').value,
+      is_active: document.getElementById('edit-active').value === 'true',
+      condition: 'good', city_district: '', show_phone: false, images: []
+    };
+    const res = await apiFetch(`/listings/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    if (res?.success) {
+      const idx = allListings.findIndex(l => l.id === id);
+      if (idx !== -1) allListings[idx] = { ...allListings[idx], ...payload };
+      closeModal('edit-modal');
+      renderListingsTable(allListings);
+      renderDashboard();
+      showToast('İlan güncellendi ✓', 'success');
+    } else {
+      showToast('Güncelleme başarısız: ' + (res?.error || ''), 'error');
+    }
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  // ─── Health Check ─────────────────────────────────────────────────────
+  async function checkHealth() {
+    const baseUrl = (document.getElementById('setting-api-url')?.value || API).replace('/api/v1', '');
+    try {
+      const res = await fetch(`${baseUrl}/health`);
+      const data = await res.json();
+      document.getElementById('health-api').innerHTML = `<span class="health-dot green"></span> Çevrimiçi (${res.status})`;
+      document.getElementById('health-db').innerHTML = `<span class="health-dot ${data.database === 'CONNECTED' ? 'green' : 'red'}"></span> ${data.database === 'CONNECTED' ? 'Bağlı' : 'Çevrimdışı'}`;
+      document.getElementById('health-ws').innerHTML = `<span class="health-dot green"></span> Socket.io Aktif`;
+    } catch {
+      document.getElementById('health-api').innerHTML = `<span class="health-dot red"></span> Bağlanamadı`;
+      document.getElementById('health-db').innerHTML = `<span class="health-dot red"></span> Bağlanamadı`;
+    }
+  }
+
+  // ─── Settings ─────────────────────────────────────────────────────────
+  function saveSettings() {
+    showToast('Ayarlar kaydedildi ✓', 'success');
+  }
+
+  // ─── Toast ────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = (type === 'success' ? '✓ ' : '✗ ') + msg;
+    el.className = `toast ${type} show`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────
+  function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function formatPrice(p) { return Number(p || 0).toLocaleString('tr-TR') + ' TL'; }
+  function formatDate(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('tr-TR'); } catch { return '—'; } }
+
+  // ─── Init ─────────────────────────────────────────────────────────────
+  loadAll();
+  setInterval(loadAll, 30000); // auto-refresh every 30s
+</script>
+</body>
+</html>

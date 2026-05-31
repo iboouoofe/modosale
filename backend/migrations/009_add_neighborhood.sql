@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS neighborhood_posts (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(50) NOT NULL,
+  user_name VARCHAR(100) NOT NULL,
+  user_avatar TEXT,
+  neighborhood VARCHAR(100) NOT NULL,
+  content TEXT NOT NULL,
+  likes INT DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

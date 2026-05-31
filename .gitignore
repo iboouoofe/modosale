@@ -1,0 +1,7 @@
+**/node_modules/
+**/.expo/
+**/dist/
+**/.env
+**/.gemini/
+.DS_Store
+uploads/
