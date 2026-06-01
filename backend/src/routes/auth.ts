@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { registerOrVerify, getUserProfile, requestOtp, refreshTokens, logoutUser } from '../controllers/auth';
+import { registerOrVerify, getUserProfile, requestOtp, refreshTokens, logoutUser, updateProfile } from '../controllers/auth';
 
 const router = Router();
 
@@ -15,7 +15,10 @@ router.post('/refresh', refreshTokens);
 // Logout token blacklisting
 router.post('/logout', logoutUser);
 
-// Profile listings retrieval
+// Profile retrieval
 router.get('/profile', getUserProfile);
+
+// Profile updates
+router.put('/profile', updateProfile);
 
 export default router;

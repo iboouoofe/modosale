@@ -309,3 +309,36 @@ export const logoutUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    const { display_name, email, avatar_url } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    const query = `
+      UPDATE users 
+      SET display_name = COALESCE($1, display_name),
+          email = COALESCE($2, email),
+          avatar_url = COALESCE($3, avatar_url),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+      RETURNING id, display_name, email, avatar_url, phone_number
+    `;
+
+    const result = await pool.query(query, [display_name, email, avatar_url, userId]);
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (error: any) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
