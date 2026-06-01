@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export const analyzeListingImage = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -14,13 +12,11 @@ export const analyzeListingImage = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // 🧠 RESILIENT FALLBACK: If ANTHROPIC_API_KEY is missing or invalid, run a rich, state-of-the-art simulator!
-    // This ensures a flawless, premium UX demo experience even without API credit.
-    if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'your_anthropic_api_key_here') {
+    // 🧠 RESILIENT FALLBACK: If GEMINI_API_KEY is missing, run a rich, state-of-the-art simulator!
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
       console.log('[AI] Running offline AI listing analyst simulator...');
       await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate AI network delay
 
-      // Auto-analyze based on existing title context, or return a stunning smart electronic suggestion
       const titleContext = existingTitle?.toLowerCase() || '';
       
       let suggestion = {
@@ -69,55 +65,44 @@ export const analyzeListingImage = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // 🤖 REAL ANTHROPIC CLAUDE 3.5 SONNET VISION ANALYSIS
-    // Convert base64 data to Claude message image format
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: imageBase64.replace(/^data:image\/\w+;base64,/, ''),
-              },
-            },
-            {
-              type: 'text',
-              text: `Sen profesyonel bir Türk ikinci el ürün pazar uzmanısın. Sana verilen ürün fotoğrafına bakarak sadece ve sadece geçerli bir JSON formatında şu bilgileri üret:
-              {
-                "title": "string (en fazla 60 karakter, Türkçe, dikkat çekici başlık)",
-                "description": "string (en fazla 400 karakter, Türkçe, ürünün durumunu ve özelliklerini detaylandıran satış metni)",
-                "category": "Elektronik" | "Moda & Giyim" | "Ev & Yaşam" | "Spor & Outdoor" | "Kitap & Hobi" | "Bebek & Çocuk" | "Diğer",
-                "condition": "new" | "good" | "fair",
-                "suggestedPrice": number (TL cinsinden piyasa değeri tahmini),
-                "priceRange": {
-                  "min": number (Minimum piyasa fiyatı),
-                  "max": number (Maksimum piyasa fiyatı)
-                }
-              }
-              JSON dışında hiçbir şey, açıklama veya kod bloğu yazma. Yanıt doğrudan JSON olmalıdır.`
-            }
-          ],
-        },
-      ],
-    });
+    // 🤖 REAL GOOGLE GEMINI 1.5 FLASH VISION ANALYSIS (FREE TIER)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const textContent = response.content[0];
-    if (textContent && textContent.type === 'text') {
-      const parsedData = JSON.parse(textContent.text);
-      res.status(200).json({
-        success: true,
-        source: 'anthropic',
-        data: parsedData,
-      });
-    } else {
-      throw new Error('Claude response content type was unexpected.');
+    const prompt = `Sen profesyonel bir Türk ikinci el ürün pazar uzmanısın. Sana verilen ürün fotoğrafına bakarak sadece ve sadece geçerli bir JSON formatında şu bilgileri üret:
+    {
+      "title": "string (en fazla 60 karakter, Türkçe, dikkat çekici başlık)",
+      "description": "string (en fazla 400 karakter, Türkçe, ürünün durumunu ve özelliklerini detaylandıran satış metni)",
+      "category": "Elektronik" | "Moda & Giyim" | "Ev & Yaşam" | "Spor & Outdoor" | "Kitap & Hobi" | "Bebek & Çocuk" | "Diğer",
+      "condition": "new" | "good" | "fair",
+      "suggestedPrice": number (TL cinsinden piyasa değeri tahmini),
+      "priceRange": {
+        "min": number (Minimum piyasa fiyatı),
+        "max": number (Maksimum piyasa fiyatı)
+      }
     }
+    JSON dışında hiçbir şey, markdown blokları veya açıklama yazma. Yanıt doğrudan sadece JSON formatında olmalıdır.`;
+
+    const imageParts = [
+      {
+        inlineData: {
+          data: imageBase64.replace(/^data:image\/\w+;base64,/, ''),
+          mimeType: "image/jpeg"
+        }
+      }
+    ];
+
+    const result = await model.generateContent([prompt, ...imageParts]);
+    let textContent = result.response.text();
+    
+    // Temizleme: Eğer gemini yanıtın başına ve sonuna ```json ... ``` koyarsa onları temizle
+    textContent = textContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    const parsedData = JSON.parse(textContent);
+    res.status(200).json({
+      success: true,
+      source: 'gemini',
+      data: parsedData,
+    });
   } catch (error: any) {
     console.error('[AI Analysis Error]:', error);
     res.status(500).json({
