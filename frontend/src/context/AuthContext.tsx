@@ -28,9 +28,7 @@ interface AuthContextType {
 // ─── API Base URL ──────────────────────────────────────────────────────────────
 // Uses local network IP so physical devices can reach the dev backend.
 // Update this if your machine's IP changes.
-export const API_BASE_URL = __DEV__
-  ? 'http://192.168.1.120:4000/api/v1'
-  : 'https://api.modosale.com/api/v1';
+export const API_BASE_URL = 'https://modosale-backend.onrender.com/api/v1';
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 const KEYS = {
@@ -51,9 +49,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const tokenRef = useRef<string | null>(null);
   const refreshTokenRef = useRef<string | null>(null);
+  const userRef = useRef<UserProfile | null>(null);
 
   useEffect(() => { tokenRef.current = token; }, [token]);
   useEffect(() => { refreshTokenRef.current = refreshToken; }, [refreshToken]);
+  useEffect(() => { userRef.current = user; }, [user]);
 
   // ─── Restore session on mount ───────────────────────────────────────────────
   useEffect(() => {
@@ -67,6 +67,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (storedUser && storedToken && storedRefresh) {
           const parsed = JSON.parse(storedUser) as UserProfile;
+          
+          // Auto-logout if using offline/mock IDs on cloud backend
+          if (parsed.id.startsWith('user-') || parsed.id.length < 30) {
+            await AsyncStorage.multiRemove([KEYS.USER, KEYS.TOKEN, KEYS.REFRESH, KEYS.FAVS(parsed.id)]);
+            setIsLoading(false);
+            return;
+          }
+
           setUser(parsed);
           setToken(storedToken);
           setRefreshToken(storedRefresh);
@@ -87,9 +95,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // use this helper for all authenticated calls.
   const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const currentToken = tokenRef.current;
+    const currentUser = userRef.current;
     const headers = new Headers(options.headers || {});
     headers.set('Content-Type', 'application/json');
     if (currentToken) headers.set('Authorization', `Bearer ${currentToken}`);
+    if (currentUser) headers.set('x-user-id', currentUser.id);
 
     let response = await fetch(url, { ...options, headers });
 
@@ -198,20 +208,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return false;
     setIsLoading(true);
     try {
-      const response = await authFetch(`${API_BASE_URL}/auth/register-verify`, {
-        method: 'POST',
+      const finalEmail = email?.trim() ? email.trim() : null;
+
+      const response = await authFetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'x-user-id': user.id,
+        },
         body: JSON.stringify({
-          phone_number: user.phone_number,
           display_name: displayName,
-          email: email ?? null,
+          email: finalEmail,
           avatar_url: avatarUrl ?? user.avatar_url,
         }),
       });
       const resData = await response.json();
 
       if (resData.success) {
-        setUser(resData.user);
-        await AsyncStorage.setItem(KEYS.USER, JSON.stringify(resData.user));
+        setUser(resData.data);
+        await AsyncStorage.setItem(KEYS.USER, JSON.stringify(resData.data));
         return true;
       }
       return false;

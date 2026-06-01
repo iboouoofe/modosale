@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth, API_BASE_URL } from '../context/AuthContext';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
@@ -121,6 +122,57 @@ export const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) =>
   const [favoriteListings, setFavoriteListings] = useState<any[]>([]);
   const [isFetchingFavorites, setIsFetchingFavorites] = useState(false);
   const [activeTab, setActiveTab] = useState<'my_listings' | 'favorites' | 'reviews'>('my_listings');
+
+  // ─── Avatar Picker ────────────────────────────────────────────────────────
+  const handleAvatarPick = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Fotoğraf seçmek için galeri erişimi izni vermelisiniz.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      try {
+        const formData = new FormData();
+        const filename = uri.split('/').pop() || 'avatar.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+        formData.append('photos', {
+          uri,
+          name: filename,
+          type,
+        } as any);
+
+        const response = await fetch(`${API_BASE_URL}/listings/upload`, {
+          method: 'POST',
+          headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (data.success && data.urls && data.urls.length > 0) {
+          const uploadedUrl = data.urls[0];
+          await updateProfile(user?.display_name || '', user?.email || '', uploadedUrl);
+          Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi!');
+        } else {
+          throw new Error('Upload failed');
+        }
+      } catch (error) {
+        console.error('Avatar upload error:', error);
+        Alert.alert('Hata', 'Profil fotoğrafı yüklenemedi.');
+      }
+    }
+  };
 
   // ─── Completion Score ───────────────────────────────────────────────────
   const { score: completionScore, missing: missingFields } = calcCompletionScore(user);
@@ -376,14 +428,19 @@ export const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) =>
           <View style={styles.userCard}>
             {/* Avatar */}
             <View style={{ position: 'relative' }}>
-              <Image
-                source={{
-                  uri: user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-                }}
-                style={styles.avatar}
-              />
+              <TouchableOpacity onPress={handleAvatarPick} activeOpacity={0.8}>
+                <Image
+                  source={{
+                    uri: user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+                  }}
+                  style={styles.avatar}
+                />
+                <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: '#0E1117', borderRadius: 12, padding: 4, borderWidth: 1, borderColor: '#DEFF9A' }}>
+                  <Edit2 size={12} color="#DEFF9A" />
+                </View>
+              </TouchableOpacity>
               {user?.is_phone_verified && (
-                <View style={styles.verifiedBadge}>
+                <View style={[styles.verifiedBadge, { bottom: -5, right: -5 }]}>
                   <ShieldCheck size={18} color="#DEFF9A" />
                 </View>
               )}
@@ -618,6 +675,9 @@ export const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) =>
                         <Text style={styles.listingLocation}>{item.city_district}</Text>
                       </View>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity onPress={() => navigation?.navigate('EditListing', { listing: item })} style={styles.bumpBtn}>
+                          <Edit2 size={14} color="#DEFF9A" />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleBump(item.id)} style={styles.bumpBtn}>
                           <ArrowUp size={14} color="#DEFF9A" />
                         </TouchableOpacity>
@@ -737,6 +797,24 @@ export const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) =>
               <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
                 <Text style={styles.modalClose}>Kapat</Text>
               </TouchableOpacity>
+            </View>
+
+            {/* Modal Avatar Selection */}
+            <View style={{ alignItems: 'center', marginBottom: 24, marginTop: 4 }}>
+              <TouchableOpacity onPress={handleAvatarPick} activeOpacity={0.8}>
+                <Image
+                  source={{
+                    uri: user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+                  }}
+                  style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: '#1E2530' }}
+                />
+                <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#0E1117', borderRadius: 12, padding: 4, borderWidth: 1, borderColor: '#DEFF9A' }}>
+                  <Edit2 size={12} color="#DEFF9A" />
+                </View>
+              </TouchableOpacity>
+              <Text style={{ color: '#DEFF9A', fontSize: 12, marginTop: 12, fontWeight: '700' }}>
+                Profil Fotoğrafını Değiştir
+              </Text>
             </View>
 
             <Input

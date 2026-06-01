@@ -2,9 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiResponse } from '../types';
 
 // ─── Base URL ──────────────────────────────────────────────────────────────────
-export const API_BASE = __DEV__
-  ? 'http://localhost:4000/api/v1'
-  : 'https://api.modosale.app/api/v1';
+export const API_BASE = 'https://modosale-backend.onrender.com/api/v1';
 
 // ─── HTTP Client ───────────────────────────────────────────────────────────────
 const getHeaders = async (): Promise<Record<string, string>> => {

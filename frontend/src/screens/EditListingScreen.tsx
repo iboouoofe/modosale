@@ -250,6 +250,9 @@ export const EditListingScreen: React.FC<{ navigation: any, route: any }> = ({ n
           images: uploadedUrls,
           category: CATEGORY_TR_TO_EN[category] || 'Other',
           show_phone: showPhone,
+          city_district: listing.city_district,
+          condition: listing.condition,
+          is_active: listing.is_active !== undefined ? listing.is_active : true,
         }),
       });
 
