@@ -33,9 +33,7 @@
     "ts-node": "^10.9.2",
     "twilio": "^6.0.2",
     "typescript": "^6.0.3",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
+    "zod": "^4.4.3",
     "@types/multer": "^2.1.0"
   }
 }
