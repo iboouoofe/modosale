@@ -334,6 +334,10 @@ export const uploadPhotos = async (req: Request, res: Response): Promise<void> =
     const host = req.get('host') || '192.168.1.120:4000';
     const protocol = req.protocol || 'http';
     const urls = files.map((file) => {
+      // If Cloudinary is used, file.path contains the full URL
+      if (file.path && file.path.startsWith('http')) {
+        return file.path;
+      }
       return `${protocol}://${host}/uploads/${file.filename}`;
     });
 
@@ -357,7 +361,11 @@ export const uploadVideo = async (req: Request, res: Response): Promise<void> =>
 
     const host = req.get('host') || '192.168.1.120:4000';
     const protocol = req.protocol || 'http';
-    const url = `${protocol}://${host}/uploads/${file.filename}`;
+    
+    // If Cloudinary is used, file.path contains the full URL
+    const url = (file.path && file.path.startsWith('http')) 
+      ? file.path 
+      : `${protocol}://${host}/uploads/${file.filename}`;
 
     res.status(200).json({
       success: true,

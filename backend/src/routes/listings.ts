@@ -15,32 +15,38 @@ import {
   unfavoriteListing
 } from '../controllers/listings';
 
-// Ensure uploads folder exists
-const uploadDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, 'photo-' + uniqueSuffix + ext);
-  }
+// Configure Cloudinary with user credentials
+cloudinary.config({
+  cloud_name: 'dzrgheqid',
+  api_key: '421577617323396',
+  api_secret: '6Eh45MwtJ_owdj_KbqNKlxmsQ_o'
 });
 
-const videoStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
+// Cloudinary storage for photos
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    return {
+      folder: 'modosale_listings',
+      format: 'jpg',
+      public_id: `photo-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+    };
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname) || '.mp4';
-    cb(null, 'video-' + uniqueSuffix + ext);
-  }
+});
+
+// Cloudinary storage for videos
+const videoStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    return {
+      folder: 'modosale_videos',
+      resource_type: 'video',
+      public_id: `video-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+    };
+  },
 });
 
 const upload = multer({
