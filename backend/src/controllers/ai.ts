@@ -65,8 +65,8 @@ export const analyzeListingImage = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // 🤖 REAL GOOGLE GEMINI 1.5 FLASH VISION ANALYSIS (FREE TIER)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // 🤖 REAL GOOGLE GEMINI 2.0 FLASH VISION ANALYSIS (FREE TIER)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `Sen profesyonel bir Türk ikinci el ürün pazar uzmanısın. Sana verilen ürün fotoğrafına bakarak sadece ve sadece geçerli bir JSON formatında şu bilgileri üret:
     {
@@ -107,7 +107,7 @@ export const analyzeListingImage = async (req: Request, res: Response): Promise<
     console.error('[AI Analysis Error]:', error);
     res.status(500).json({
       success: false,
-      error: 'AI analiz işlemi gerçekleştirilemedi.',
+      error: 'AI Hatası: ' + (error.message || 'Bilinmeyen hata'),
       message: error.message,
     });
   }
