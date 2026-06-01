@@ -411,7 +411,14 @@ export const AddListingScreen: React.FC<{ navigation: any }> = ({ navigation }) 
     <View className="flex-1 bg-dark">
       {/* Top Header */}
       <View className="pt-16 pb-4 px-6 border-b border-dark-border bg-dark-card flex-row justify-between items-center">
-        <Text className="text-light text-lg font-black tracking-tight">Hızlı İlan Yükle</Text>
+        <View className="flex-row items-center">
+          {step === 2 && (
+            <TouchableOpacity onPress={() => setStep(1)} className="mr-3 p-1 bg-dark-input rounded-full border border-dark-border">
+              <ChevronLeft size={20} color="#DEFF9A" />
+            </TouchableOpacity>
+          )}
+          <Text className="text-light text-lg font-black tracking-tight">Hızlı İlan Yükle</Text>
+        </View>
         <Text className="text-neon text-xs font-bold uppercase tracking-wider bg-dark-input px-2.5 py-1 rounded-md border border-dark-border">
           Adım {step}/2
         </Text>
@@ -587,66 +594,17 @@ export const AddListingScreen: React.FC<{ navigation: any }> = ({ navigation }) 
           
           <Text className="text-muted text-xs font-semibold mb-3 uppercase tracking-wider pl-1">İlan Ayrıntıları</Text>
 
-          {/* ✨ FÜTÜRİSTİK SHIMMER GRADIENT AI BUTONU */}
-          <TouchableOpacity
-            onPress={handleAiFill}
-            disabled={isAiLoading}
-            activeOpacity={0.8}
-            style={{
-              borderRadius: 20,
-              padding: 1,
-              backgroundColor: '#DEFF9A',
-              marginBottom: 20,
-              shadowColor: '#DEFF9A',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
-              shadowRadius: 10,
-              elevation: 6
-            }}
-          >
-            <View style={{
-              backgroundColor: '#131820',
-              borderRadius: 19,
-              height: 52,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingHorizontal: 16
-            }}>
-              {isAiLoading ? (
-                <ActivityIndicator color="#DEFF9A" size="small" style={{ marginRight: 10 }} />
-              ) : (
-                <Text style={{ marginRight: 8, fontSize: 16 }}>✨</Text>
-              )}
-              <Text style={{
-                color: '#DEFF9A',
-                fontWeight: '900',
-                fontSize: 13,
-                textTransform: 'uppercase',
-                letterSpacing: 1
-              }}>
-                {isAiLoading ? '🤖 Analiz Ediliyor...' : 'Yapay Zeka ile Otomatik Doldur'}
-              </Text>
-            </View>
-          </TouchableOpacity>
+
           
           <View style={{ position: 'relative' }}>
             <Input
               label="İlan Başlığı"
               placeholder="Örn: AirPods Max Kulaklık"
               value={title}
-              onChangeText={(t) => {
-                setTitle(t);
-                if (showAiLabels.title) setShowAiLabels(prev => ({ ...prev, title: false }));
-              }}
+              onChangeText={setTitle}
               returnKeyType="done"
               onSubmitEditing={Keyboard.dismiss}
             />
-            {showAiLabels.title && (
-              <View style={{ position: 'absolute', top: 4, right: 8, backgroundColor: 'rgba(222,255,154,0.1)', borderWidth: 1, borderColor: '#DEFF9A', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ color: '#DEFF9A', fontSize: 8, fontWeight: '900' }}>✨ AI</Text>
-              </View>
-            )}
           </View>
 
           <View style={{ position: 'relative' }}>
@@ -655,76 +613,22 @@ export const AddListingScreen: React.FC<{ navigation: any }> = ({ navigation }) 
               placeholder="Örn: 9500"
               keyboardType="numeric"
               value={price}
-              onChangeText={(t) => {
-                setPrice(t);
-                if (showAiLabels.price) setShowAiLabels(prev => ({ ...prev, price: false }));
-              }}
+              onChangeText={setPrice}
               returnKeyType="done"
               onSubmitEditing={Keyboard.dismiss}
             />
-            {showAiLabels.price && (
-              <View style={{ position: 'absolute', top: 4, right: 8, backgroundColor: 'rgba(222,255,154,0.1)', borderWidth: 1, borderColor: '#DEFF9A', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ color: '#DEFF9A', fontSize: 8, fontWeight: '900' }}>✨ AI</Text>
-              </View>
-            )}
           </View>
-
-          {/* 📊 FÜTÜRİSTİK AI FİYAT ANALİZİ VE ÖNERİ KUTUSU */}
-          {aiPriceSuggestion && (
-            <View style={{
-              backgroundColor: 'rgba(222,255,154,0.03)',
-              borderRadius: 16,
-              borderWidth: 1.5,
-              borderColor: 'rgba(222,255,154,0.2)',
-              padding: 16,
-              marginBottom: 20,
-              marginTop: -10
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>📊</Text>
-                <Text style={{ color: '#DEFF9A', fontWeight: '900', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8 }}>Piyasa Fiyat Analizi</Text>
-              </View>
-              <Text style={{ color: '#9CA3AF', fontSize: 12, lineHeight: 18, marginBottom: 12 }}>
-                Benzer ikinci el ürünler piyasada <Text style={{ color: '#F9FAFB', fontWeight: 'bold' }}>{aiPriceSuggestion.min.toLocaleString('tr-TR')} ₺</Text> ile <Text style={{ color: '#F9FAFB', fontWeight: 'bold' }}>{aiPriceSuggestion.max.toLocaleString('tr-TR')} ₺</Text> arasında satılıyor.
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setPrice(String(aiPriceSuggestion.suggested));
-                  setAiPriceSuggestion(null);
-                }}
-                style={{
-                  backgroundColor: '#DEFF9A',
-                  borderRadius: 12,
-                  height: 38,
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Text style={{ color: '#0E1117', fontWeight: '900', fontSize: 11, textTransform: 'uppercase' }}>
-                  Önerilen Fiyatı Uygula ({aiPriceSuggestion.suggested.toLocaleString('tr-TR')} ₺)
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           <View style={{ position: 'relative' }}>
             <Input
               label="Açıklama"
               placeholder="Kullanım durumu, kutusu, teslim adresi..."
               value={description}
-              onChangeText={(t) => {
-                setDescription(t);
-                if (showAiLabels.description) setShowAiLabels(prev => ({ ...prev, description: false }));
-              }}
+              onChangeText={setDescription}
               multiline
               numberOfLines={4}
               className="h-28 text-left"
             />
-            {showAiLabels.description && (
-              <View style={{ position: 'absolute', top: 4, right: 8, backgroundColor: 'rgba(222,255,154,0.1)', borderWidth: 1, borderColor: '#DEFF9A', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ color: '#DEFF9A', fontSize: 8, fontWeight: '900' }}>✨ AI</Text>
-              </View>
-            )}
           </View>
 
           {/* Category Selector */}
