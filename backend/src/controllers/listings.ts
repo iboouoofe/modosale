@@ -179,22 +179,31 @@ export const updateListing = async (req: Request, res: Response): Promise<void> 
 
     const query = `
       UPDATE listings SET
-        title = $1,
-        description = $2,
-        price = $3,
-        category = $4,
-        condition = $5,
-        city_district = $6,
-        show_phone = $7,
-        images = $8,
-        is_active = $9
-      WHERE id = $10
+        title = COALESCE($1, title),
+        description = COALESCE($2, description),
+        price = COALESCE($3, price),
+        category = COALESCE($4, category),
+        condition = COALESCE($5, condition),
+        city_district = COALESCE($6, city_district),
+        show_phone = COALESCE($7, show_phone),
+        images = COALESCE($8, images),
+        is_active = COALESCE($9, is_active)
+      WHERE id = $10 AND user_id = $11
       RETURNING *, ST_X(location::geometry) as longitude, ST_Y(location::geometry) as latitude
     `;
 
     const result = await pool.query(query, [
-      title, description, parseFloat(price), category, condition || 'good',
-      city_district, show_phone ?? false, images, is_active ?? true, id
+      title || null, 
+      description || null, 
+      price ? parseFloat(price) : null, 
+      category || null, 
+      condition || null,
+      city_district || null, 
+      show_phone !== undefined ? show_phone : null, 
+      images || null, 
+      is_active !== undefined ? is_active : null, 
+      id, 
+      userId
     ]);
 
     if (result.rows.length === 0) {
