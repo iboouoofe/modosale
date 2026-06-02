@@ -11,7 +11,7 @@ import {
   googleLogin
 } from '../controllers/auth';
 
-import { authenticate } from '../middleware/auth';
+import { authenticateUser } from '../middlewares/auth';
 
 const router = Router();
 
@@ -29,7 +29,7 @@ router.post('/google', googleLogin);
 // Token management & Profile
 router.post('/refresh', refreshTokens);
 router.post('/logout', logoutUser);
-router.get('/profile', authenticate, getUserProfile);
-router.put('/profile', authenticate, updateProfile);
+router.get('/profile', authenticateUser, getUserProfile);
+router.put('/profile', authenticateUser, updateProfile);
 
 export default router;
