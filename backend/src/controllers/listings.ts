@@ -31,6 +31,7 @@ export const getListingsFeed = async (req: Request, res: Response): Promise<void
         listings.condition,
         listings.city_district, 
         listings.show_phone, 
+        listings.is_promoted,
         listings.bumped_at, 
         listings.created_at,
         ST_X(listings.location::geometry) as longitude,
@@ -40,14 +41,14 @@ export const getListingsFeed = async (req: Request, res: Response): Promise<void
     const queryParams: any[] = [];
     let distanceSelect = '';
     let locationWhere = '';
-    let orderClause = 'ORDER BY listings.bumped_at DESC';
+    let orderClause = 'ORDER BY listings.is_promoted DESC, listings.bumped_at DESC';
 
     // If coordinates are provided, compute distance and filter based on radius
     if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
       distanceSelect = `, ST_DistanceSphere(listings.location, ST_MakePoint($1, $2)) as distance_meters`;
       locationWhere = `AND ST_DWithin(listings.location::geography, ST_MakePoint($1, $2)::geography, $3 * 1000)`;
       queryParams.push(lng, lat, radiusKm);
-      orderClause = 'ORDER BY distance_meters ASC, listings.bumped_at DESC';
+      orderClause = 'ORDER BY listings.is_promoted DESC, distance_meters ASC, listings.bumped_at DESC';
     }
 
     query += distanceSelect;
@@ -263,6 +264,7 @@ export const getListingDetails = async (req: Request, res: Response): Promise<vo
         city_district, 
         show_phone, 
         is_active,
+        is_promoted,
         bumped_at, 
         created_at,
         ST_X(location::geometry) as longitude,
@@ -432,6 +434,41 @@ export const unfavoriteListing = async (req: Request, res: Response): Promise<vo
     });
   } catch (error: any) {
     console.error('Error unfavoriting listing:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const requestPromotion = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params; // listing id
+    const userId = req.headers['x-user-id'] as string;
+    const { proof_image_url } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'Unauthorized.' });
+      return;
+    }
+
+    if (!proof_image_url) {
+      res.status(400).json({ success: false, error: 'Proof image URL is required.' });
+      return;
+    }
+
+    // Insert into promotion_requests
+    const query = `
+      INSERT INTO promotion_requests (user_id, listing_id, proof_image_url)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `;
+    const result = await pool.query(query, [userId, id, proof_image_url]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Promotion request submitted successfully.',
+      data: result.rows[0]
+    });
+  } catch (error: any) {
+    console.error('Error submitting promotion request:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

@@ -12,7 +12,8 @@ import {
   uploadPhotos,
   uploadVideo,
   favoriteListing,
-  unfavoriteListing
+  unfavoriteListing,
+  requestPromotion
 } from '../controllers/listings';
 
 import { v2 as cloudinary } from 'cloudinary';
@@ -85,6 +86,9 @@ router.post('/:id/bump', bumpListing);
 
 // Update (edit/revise) a listing
 router.patch('/:id', updateListing);
+
+// Request promotion
+router.post('/:id/promote', requestPromotion);
 
 // Delete listing
 router.delete('/:id', deleteListing);

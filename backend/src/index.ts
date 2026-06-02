@@ -19,6 +19,7 @@ import swapRoutes from './routes/swaps';
 import analyticsRoutes from './routes/analytics';
 import storeRoutes from './routes/stores';
 import neighborhoodRoutes from './routes/neighborhood';
+import adminRoutes from './routes/admin';
 
 dotenv.config();
 
