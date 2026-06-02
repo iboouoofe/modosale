@@ -342,3 +342,140 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+export const requestEmailOtp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+    const now = Date.now();
+
+    if (!email) {
+       res.status(400).json({ success: false, error: 'Email is required.' });
+       return;
+    }
+
+    const generatedCode = Math.floor(100000 + Math.random() * 900000).toString(); 
+    
+    otpStorage[email] = {
+      code: generatedCode,
+      expiresAt: now + 3 * 60 * 1000,
+      attempts: 0,
+      lockUntil: 0
+    };
+
+    console.log(`[EMAIL OTP SIMULATION] Sent 6-digit verification code ${generatedCode} to email: ${email}. Valid for 3 minutes.`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent successfully to email.',
+      code: generatedCode 
+    });
+  } catch (error: any) {
+    console.error('Error in requestEmailOtp:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const verifyEmailOtp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, code } = req.body;
+    const now = Date.now();
+
+    if (!email || !code) {
+      res.status(400).json({ success: false, error: 'Email and code are required.' });
+      return;
+    }
+
+    const otpData = otpStorage[email];
+
+    if (!otpData || otpData.expiresAt < now) {
+       res.status(400).json({ success: false, error: 'OTP expired or not found.' });
+       return;
+    }
+
+    if (otpData.code !== code) {
+       res.status(400).json({ success: false, error: 'Invalid verification code.' });
+       return;
+    }
+
+    delete otpStorage[email];
+
+    let query = `SELECT * FROM users WHERE email = $1`;
+    let result = await pool.query(query, [email]);
+    let user;
+
+    if (result.rows.length === 0) {
+      const insertQuery = `
+        INSERT INTO users (email, display_name, is_phone_verified)
+        VALUES ($1, $2, TRUE) RETURNING *
+      `;
+      const insertRes = await pool.query(insertQuery, [email, 'Yeni Kullanıcı']);
+      user = insertRes.rows[0];
+    } else {
+      user = result.rows[0];
+    }
+
+    const accessToken = `at-mock-${user.id}-${Date.now() + 15 * 60 * 1000}`;
+    const refreshToken = `rt-mock-${user.id}-${Date.now() + 7 * 24 * 60 * 60 * 1000}`;
+
+    res.status(200).json({
+      success: true,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token: accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        avatar_url: user.avatar_url,
+      }
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const googleLogin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, display_name, avatar_url } = req.body;
+    
+    if (!email) {
+      res.status(400).json({ success: false, error: 'Email from Google is required.' });
+      return;
+    }
+
+    let query = `SELECT * FROM users WHERE email = $1`;
+    let result = await pool.query(query, [email]);
+    let user;
+
+    if (result.rows.length === 0) {
+      const insertQuery = `
+        INSERT INTO users (email, display_name, avatar_url, is_phone_verified)
+        VALUES ($1, $2, $3, TRUE) RETURNING *
+      `;
+      const insertRes = await pool.query(insertQuery, [email, display_name || 'Google Kullanıcısı', avatar_url]);
+      user = insertRes.rows[0];
+    } else {
+      user = result.rows[0];
+    }
+
+    const accessToken = `at-mock-${user.id}-${Date.now() + 15 * 60 * 1000}`;
+    const refreshToken = `rt-mock-${user.id}-${Date.now() + 7 * 24 * 60 * 60 * 1000}`;
+
+    res.status(200).json({
+      success: true,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token: accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        avatar_url: user.avatar_url,
+      }
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

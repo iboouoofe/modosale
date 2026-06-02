@@ -1,24 +1,35 @@
 import { Router } from 'express';
-import { registerOrVerify, getUserProfile, requestOtp, refreshTokens, logoutUser, updateProfile } from '../controllers/auth';
+import { 
+  registerOrVerify, 
+  requestOtp, 
+  refreshTokens, 
+  logoutUser, 
+  getUserProfile, 
+  updateProfile,
+  requestEmailOtp,
+  verifyEmailOtp,
+  googleLogin
+} from '../controllers/auth';
+
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
-// Request OTP SMS dispatch code
+// Phone Auth
+router.post('/register-verify', registerOrVerify);
 router.post('/request-otp', requestOtp);
 
-// OTP/Social auth token validation
-router.post('/register-verify', registerOrVerify);
+// Email Auth
+router.post('/email/request-otp', requestEmailOtp);
+router.post('/email/verify-otp', verifyEmailOtp);
 
-// Token refresh endpoint
+// Google Auth
+router.post('/google', googleLogin);
+
+// Token management & Profile
 router.post('/refresh', refreshTokens);
-
-// Logout token blacklisting
 router.post('/logout', logoutUser);
-
-// Profile retrieval
-router.get('/profile', getUserProfile);
-
-// Profile updates
-router.put('/profile', updateProfile);
+router.get('/profile', authenticate, getUserProfile);
+router.put('/profile', authenticate, updateProfile);
 
 export default router;
